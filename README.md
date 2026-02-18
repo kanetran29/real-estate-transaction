@@ -29,11 +29,11 @@ graph TB
     subgraph Platform ["🏢 RETAP Automation Platform"]
         style Platform fill:#f0f4f8,stroke:#37474f,stroke-width:2px
 
-        Gateway[("☁️ API Gateway<br/>(Security/Load Balancer)")]
+        Gateway["☁️ API Gateway<br/>Security / Load Balancer"]
 
         subgraph Core ["The Brain"]
             style Core fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
-            Engine[("🧠 Workflow Engine<br/>(State Machine)")]
+            Engine["🧠 Workflow Engine<br/>State Machine"]
             DB[(PostgreSQL<br/>Audit Ledger)]
         end
     end
@@ -42,10 +42,10 @@ graph TB
     subgraph SaaS ["🌍 External Automated Services"]
         style SaaS fill:#fff3e0,stroke:#ff6f00,stroke-width:2px
 
-        Identity[("🆔 Identity API<br/>(Onfido/SumSub)")]
-        Sign[("✍️ E-Sign API<br/>(DocuSign)")]
-        Bank[("💰 Banking API<br/>(Stripe Treasury)")]
-        Gov[("🏛️ Registry API<br/>(Simplifile)")]
+        Identity["🆔 Identity API<br/>Onfido / SumSub"]
+        Sign["✍️ E-Sign API<br/>DocuSign"]
+        Bank["💰 Banking API<br/>Stripe Treasury"]
+        Gov["🏛️ Registry API<br/>Simplifile"]
     end
 
     %% --- The Flow ---
@@ -58,7 +58,7 @@ graph TB
 
     %% Phase 2: Compliance
     Engine -->|3. Request ID Check| Identity
-    Identity -.->|Webhook: Verified (99%)| Engine
+    Identity -.->|Webhook: Verified| Engine
 
     %% Phase 3: Escrow
     Engine -->|4. Create Virtual IBAN| Bank
