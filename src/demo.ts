@@ -1,4 +1,5 @@
 import { TransactionService } from './services/TransactionService';
+import { NotaryAgentService } from './services/NotaryAgentService';
 import { DocumentType, PaymentMethod } from './models/Transaction';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -94,6 +95,7 @@ async function runDemo() {
   console.log(`${DIM}  This demo walks through every automated step to completion.${RESET}`);
 
   const service1 = new TransactionService();
+  const notaryAgent = new NotaryAgentService();
   let stepCounter = 1;
 
   // Step 1: Initiate
@@ -103,6 +105,14 @@ async function runDemo() {
   info(`Property: ${property1.address} — €${property1.price.toLocaleString()}`);
   info(`Seller: ${seller.name}  | Buyer: ${buyer.name}`);
   printStatus('Status', tx1.status);
+
+  // Show auto-generated contract
+  const contract1 = tx1.contract!;
+  console.log(`\n  ${BOLD}${MAGENTA}📄 Contract auto-generated${RESET}`);
+  ok(`Contract ID : ${BOLD}${contract1.id}${RESET}`);
+  ok(`Template    : ${contract1.templateVersion}`);
+  ok(`Generated at: ${contract1.generatedAt.toISOString()}`);
+  console.log(`\n${DIM}${contract1.content}${RESET}\n`);
 
   // Step 2: Open Escrow
   step(stepCounter++, 'Opening escrow account');
@@ -127,12 +137,9 @@ async function runDemo() {
   });
   printStatus('Status', service1.getTransaction(tx1.id).status);
 
-  // Step 4: Verify Documents
-  step(stepCounter++, 'Notary verifies all documents');
-  uploadedDocs1.forEach((doc, i) => {
-    service1.verifyDocument(tx1.id, doc.id, notary.id);
-    ok(`${docsToUpload1[i].label.padEnd(22)} verified by ${notary.name}`);
-  });
+  // Step 4: AI Notary Agent verifies all documents
+  step(stepCounter++, 'AI Notary Agent verifies all documents');
+  notaryAgent.verifyAllDocuments(tx1.id, service1);
   printStatus('Status', service1.getTransaction(tx1.id).status);
 
   // Step 5: Process Payment via Escrow
@@ -180,6 +187,7 @@ async function runDemo() {
   console.log(`\n${DIM}  Scenario: Buyer decides to cancel after documents are uploaded for property 2.${RESET}`);
 
   const service2 = new TransactionService();
+  const notaryAgent2 = new NotaryAgentService();
   stepCounter = 1;
 
   step(stepCounter++, 'Initiating transaction');
@@ -203,9 +211,9 @@ async function runDemo() {
   ok('Transaction cancelled.');
   printStatus('Status', service2.getTransaction(tx2.id).status);
 
-  step(stepCounter++, 'Attempting to verify documents on a cancelled transaction');
+  step(stepCounter++, 'Attempting to verify documents on a cancelled transaction (AI Notary Agent)');
   try {
-    service2.verifyDocument(tx2.id, doc2a.id, notary.id);
+    notaryAgent2.verifyAllDocuments(tx2.id, service2);
   } catch (e: unknown) {
     guard((e as Error).message);
   }
@@ -220,6 +228,7 @@ async function runDemo() {
   console.log(`\n${DIM}  Scenario: Seller disputes payment after it's confirmed for property 3.${RESET}`);
 
   const service3 = new TransactionService();
+  const notaryAgent3 = new NotaryAgentService();
   stepCounter = 1;
 
   step(stepCounter++, 'Setting up transaction through to payment confirmed');
@@ -231,8 +240,8 @@ async function runDemo() {
     { type: DocumentType.IDENTITY_BUYER, by: buyer.id },
     { type: DocumentType.PURCHASE_AGREEMENT, by: seller.id },
   ];
-  const uploadedDocs3 = docsToUpload3.map(d => service3.uploadDocument(tx3.id, d.type, d.by));
-  uploadedDocs3.forEach(doc => service3.verifyDocument(tx3.id, doc.id, notary.id));
+  docsToUpload3.forEach(d => service3.uploadDocument(tx3.id, d.type, d.by));
+  notaryAgent3.verifyAllDocuments(tx3.id, service3);
   const payment3 = service3.processPayment(tx3.id, property3.price, buyer.id, PaymentMethod.ESCROW, 'FI-BANK-2024-99876');
   service3.confirmPayment(tx3.id, payment3.id, bank.id);
   ok(`Transaction reached ${statusBadge(service3.getTransaction(tx3.id).status)}`);
@@ -269,6 +278,7 @@ async function runDemo() {
   console.log(`\n${DIM}  Demonstrating how the state machine prevents invalid actions.${RESET}`);
 
   const service4 = new TransactionService();
+  const notaryAgent4 = new NotaryAgentService();
   stepCounter = 1;
 
   step(stepCounter++, 'Setting up a transaction for guard testing');
@@ -278,7 +288,8 @@ async function runDemo() {
   service4.uploadDocument(tx4.id, DocumentType.IDENTITY_SELLER, seller.id);
   service4.uploadDocument(tx4.id, DocumentType.IDENTITY_BUYER, buyer.id);
   service4.uploadDocument(tx4.id, DocumentType.PURCHASE_AGREEMENT, seller.id);
-  service4.verifyDocument(tx4.id, doc4a.id, notary.id);
+  // Manually verify only the first doc so we can test duplicate guard
+  service4.verifyDocument(tx4.id, doc4a.id, 'ai-notary-agent-v1');
   ok(`Transaction is in ${statusBadge(service4.getTransaction(tx4.id).status)}`);
 
   // Guard 1: Duplicate document verification
@@ -289,11 +300,11 @@ async function runDemo() {
     guard((e as Error).message);
   }
 
-  // Verify remaining docs to reach PAYMENT_PENDING
+  // Verify remaining docs via AI agent to reach PAYMENT_PENDING
   const tx4Docs = service4.getTransaction(tx4.id).documents;
-  tx4Docs.filter(d => !d.verified).forEach(d => service4.verifyDocument(tx4.id, d.id, notary.id));
+  tx4Docs.filter(d => !d.verified).forEach(d => service4.verifyDocument(tx4.id, d.id, 'ai-notary-agent-v1'));
   ok(`All docs verified — now in ${statusBadge(service4.getTransaction(tx4.id).status)}`);
-
+  void notaryAgent4; // referenced above via direct calls
   // Guard 2: Wrong payment amount (negative / zero)
   step(stepCounter++, 'Guard 2 — Attempting to process a payment with amount ≤ 0');
   try {

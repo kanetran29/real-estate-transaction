@@ -5,10 +5,15 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "demo": "tsx src/demo.ts",
     "build": "tsc",
     "start": "node dist/index.js"
   },
-  "keywords": ["real-estate", "transaction", "automation"],
+  "keywords": [
+    "real-estate",
+    "transaction",
+    "automation"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {

@@ -7,7 +7,7 @@ A TypeScript demo of an automated real estate transaction engine. It models the 
 Every transaction moves through a fixed sequence of states:
 
 ```
-INITIATED → DOCUMENTS_PENDING → DOCUMENTS_VERIFIED → PAYMENT_PENDING → PAYMENT_RECEIVED → OWNERSHIP_TRANSFER_PENDING → COMPLETED
+INITIATED → CONTRACT_GENERATED → DOCUMENTS_PENDING → DOCUMENTS_VERIFIED → PAYMENT_PENDING → PAYMENT_RECEIVED → OWNERSHIP_TRANSFER_PENDING → COMPLETED
 ```
 
 The service layer enforces this — any operation attempted out of order throws immediately. Transactions can also branch into `CANCELLED` or `DISPUTED` states, with dispute resolution returning to `OWNERSHIP_TRANSFER_PENDING`.
@@ -33,22 +33,29 @@ graph LR
     Engine -->|Record deed| Gov
 ```
 
-## Document upload & verification
+## Contract generation & document verification
 
 ```mermaid
 sequenceDiagram
     actor Seller
     actor Buyer
     participant Engine as Workflow Engine
-    participant Notary
+    participant AI as AI Notary Agent
 
-    Note over Engine: State: DOCUMENTS_PENDING
+    Note over Engine: State: INITIATED
+
+    Engine->>Engine: Auto-generate purchase agreement
+    Note right of Engine: Template v2.1-AI fills in property,<br/>party names, price, and date
+    Engine->>Engine: State → CONTRACT_GENERATED
+    Engine->>Engine: State → DOCUMENTS_PENDING
 
     Seller->>Engine: Upload Title Deed + Identity
     Buyer->>Engine: Upload Identity
     Seller->>Engine: Upload Purchase Agreement
 
-    Notary->>Engine: Verify each document
+    Engine->>AI: Trigger document analysis
+    AI->>AI: Score each doc (confidence 0.00-1.00)
+    AI-->>Engine: verifyDocument() per passing doc
 
     Note over Engine: All required docs verified
     Engine->>Engine: State → DOCUMENTS_VERIFIED

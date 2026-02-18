@@ -4,6 +4,7 @@ import {
   Document, DocumentType, Payment, PaymentMethod,
   EscrowAccount, AuditEvent,
 } from '../models/Transaction';
+import { ContractService } from './ContractService';
 
 // ─── Required documents for a valid transaction ───────────────────────────────
 const REQUIRED_DOCUMENTS: DocumentType[] = [
@@ -20,6 +21,7 @@ const REQUIRED_DOCUMENTS: DocumentType[] = [
 
 export class TransactionService {
   private transactions: Map<string, Transaction> = new Map();
+  private contractService = new ContractService();
 
   // ── 1. Initiate ─────────────────────────────────────────────────────────────
   initiateTransaction(property: Property, seller: Party, buyer: Party): Transaction {
@@ -39,6 +41,14 @@ export class TransactionService {
     this.transactions.set(transaction.id, transaction);
     this.addAuditEvent(transaction, 'SYSTEM', 'TRANSACTION_INITIATED',
       `Transaction created for property at ${property.address}`);
+
+    // Auto-generate purchase agreement contract
+    const contract = this.contractService.generateContract(transaction);
+    transaction.contract = contract;
+    this.transitionStatus(transaction, TransactionStatus.CONTRACT_GENERATED, 'SYSTEM');
+    this.addAuditEvent(transaction, 'SYSTEM', 'CONTRACT_GENERATED',
+      `Purchase agreement auto-generated (id: ${contract.id}, template: ${contract.templateVersion})`);
+
     this.transitionStatus(transaction, TransactionStatus.DOCUMENTS_PENDING, 'SYSTEM');
     return transaction;
   }

@@ -2,6 +2,7 @@
 
 export enum TransactionStatus {
   INITIATED = 'INITIATED',
+  CONTRACT_GENERATED = 'CONTRACT_GENERATED',
   DOCUMENTS_PENDING = 'DOCUMENTS_PENDING',
   DOCUMENTS_VERIFIED = 'DOCUMENTS_VERIFIED',
   PAYMENT_PENDING = 'PAYMENT_PENDING',
@@ -19,6 +20,19 @@ export enum DocumentType {
   PURCHASE_AGREEMENT = 'PURCHASE_AGREEMENT',
   MORTGAGE_APPROVAL = 'MORTGAGE_APPROVAL',
   INSPECTION_REPORT = 'INSPECTION_REPORT',
+}
+
+export interface GeneratedContract {
+  id: string;
+  templateVersion: string;
+  generatedAt: Date;
+  propertyAddress: string;
+  sellerName: string;
+  buyerName: string;
+  agreedPrice: number;
+  content: string;
+  signedAt?: Date;
+  signedBy?: string;
 }
 
 export enum PaymentMethod {
@@ -90,6 +104,7 @@ export interface Transaction {
   payments: Payment[];
   escrow?: EscrowAccount;
   auditLog: AuditEvent[];
+  contract?: GeneratedContract;
   createdAt: Date;
   updatedAt: Date;
   completedAt?: Date;
