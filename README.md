@@ -33,12 +33,53 @@ graph LR
     Engine -->|Record deed| Gov
 ```
 
-## Escrow flow
+## Document upload & verification
 
-Buyers never send money directly to sellers. A virtual IBAN is created per transaction, funds are held until the deed is recorded, then released automatically.
+```mermaid
+sequenceDiagram
+    actor Seller
+    actor Buyer
+    participant Engine as Workflow Engine
+    participant Notary
 
+    Note over Engine: State: DOCUMENTS_PENDING
+
+    Seller->>Engine: Upload Title Deed + Identity
+    Buyer->>Engine: Upload Identity
+    Seller->>Engine: Upload Purchase Agreement
+
+    Notary->>Engine: Verify each document
+
+    Note over Engine: All required docs verified
+    Engine->>Engine: State → DOCUMENTS_VERIFIED
+    Engine->>Engine: State → PAYMENT_PENDING
 ```
-Buyer wires funds → Virtual IBAN → Funds locked → Deed recorded → Payout to seller
+
+## Payment & escrow settlement
+
+```mermaid
+sequenceDiagram
+    actor Buyer
+    participant Engine as Workflow Engine
+    participant Bank as Banking API
+    actor Seller
+
+    Note over Engine: State: PAYMENT_PENDING
+
+    Engine->>Bank: Create virtual IBAN for this transaction
+    Bank-->>Engine: IBAN confirmed
+
+    Buyer->>Bank: Wire full purchase amount to IBAN
+    Bank-->>Engine: Webhook: FUNDS_RECEIVED
+    Engine->>Engine: Assert amount == contract price
+    Engine->>Engine: State → PAYMENT_RECEIVED
+    Engine->>Engine: State → OWNERSHIP_TRANSFER_PENDING
+
+    Note over Engine: Notary records deed
+
+    Engine->>Bank: Release escrow funds
+    Bank->>Seller: Payout (net proceeds)
+    Engine->>Engine: State → COMPLETED
 ```
 
 ## Run the demo
