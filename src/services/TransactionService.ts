@@ -202,6 +202,14 @@ export class TransactionService {
     this.addAuditEvent(tx, actor, 'DISPUTE_RAISED', `Dispute: ${reason}`);
   }
 
+  resolveDispute(transactionId: string, actor: string, resolution: string): void {
+    const tx = this.getTransaction(transactionId);
+    this.assertStatus(tx, [TransactionStatus.DISPUTED], 'resolve dispute');
+    tx.disputeReason = undefined;
+    this.transitionStatus(tx, TransactionStatus.OWNERSHIP_TRANSFER_PENDING, actor);
+    this.addAuditEvent(tx, actor, 'DISPUTE_RESOLVED', `Resolution: ${resolution}`);
+  }
+
   // ── Queries ──────────────────────────────────────────────────────────────────
   getTransaction(transactionId: string): Transaction {
     const tx = this.transactions.get(transactionId);
